@@ -1,7 +1,14 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from contextlib import asynccontextmanager
+from config import settings
 from model_utils import load_model
 from routers import predict
+from routers import pratos
+from routers import bebidas
+from routers import pedidos
+from routers import reservas
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -11,10 +18,77 @@ async def lifespan(app: FastAPI):
     # Finalização: Limpeza se necessário
     app.state.model = None
 
-app = FastAPI(title="Santo Garfo API - MLOps", lifespan=lifespan)
+app = FastAPI(
+    title=settings.app_name,
+    version=settings.app_version,
+    lifespan=lifespan
+)
+
+app.default_response_class = JSONResponse
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={
+            "erro": "Dados de entrada inválidos",
+            "status": 422,
+            "path": str(request.url),
+            "detalhes": [
+                {
+                    "campo": " -> ".join(str(loc) for loc in e["loc"]),
+                    "mensagem": e["msg"]
+                }
+                for e in exc.errors()
+            ]
+        }
+    )
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "erro": exc.detail,
+            "status": exc.status_code,
+            "path": str(request.url),
+            "detalhes": []
+        }
+    )
 
 # Novo Router de Machine Learning
 app.include_router(predict.router, prefix="/ml", tags=["ML"])
+
+app.include_router(
+    pratos.router,
+    prefix="/pratos",
+    tags=["Pratos"]
+)
+
+app.include_router(
+    bebidas.router, 
+    prefix="/bebidas", 
+    tags=["Bebidas"])
+
+app.include_router(
+    pedidos.router, 
+    prefix="/pedidos", 
+    tags=["Pedidos"])
+
+app.include_router(
+    reservas.router,
+    prefix="/reservas",
+    tags=["Reservas"])
+
+@app.get("/", tags=["Informações"])
+async def root():
+    return {
+        "restaurante": "Santo Garfo",
+        "mensagem": "Bem-vindo à nossa API",
+        "chef": "Juliana Miranda",
+        "cidade": "São Paulo",
+        "especialidade": "Comida brasileira"
+    }
 
 @app.get("/health", tags=["Monitoramento"])
 async def health(request: Request):
