@@ -23,6 +23,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          python -m pip install pytest
 
       - name: Iniciar API em background
         run: |
@@ -35,4 +36,4 @@ jobs:
           echo "API respondeu com sucesso"
           
       - name: Rodar testes
-        run: pytest tests/ -v --tb=short
+        run: python -m pytest tests/ -q
