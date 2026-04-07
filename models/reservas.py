@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, field_validator
 from config import settings
 from datetime import datetime
 
+
 class ReservaInput(BaseModel):
     mesa: int = Field(ge=1, le=settings.max_mesas)
     nome: str = Field(min_length=2, max_length=100)
@@ -13,8 +14,11 @@ class ReservaInput(BaseModel):
     def deve_ser_futura(cls, v):
         agora = datetime.now(tz=v.tzinfo)
         if (v - agora).total_seconds() < 3600:
-            raise ValueError("Reserva deve ser feita com pelo menos 1 hora de antecedência")
+            raise ValueError(
+                "Reserva deve ser feita com pelo menos 1 hora de antecedência"
+            )
         return v
+
 
 class ReservaOutput(BaseModel):
     id: int

@@ -7,27 +7,94 @@ router = APIRouter()
 
 pratos = [
     # Entradas
-    {"id": 1, "nome": "Dadinho de Tapioca com Geleia de Pimenta", "categoria": "Entrada", "preco": 28.00, "disponivel": True},
-    {"id": 2, "nome": "Caldinho de Feijão", "categoria": "Entrada", "preco": 18.50, "disponivel": True},
-    {"id": 3, "nome": "Porção de Pastéis (Carne, Queijo e Palmito)", "categoria": "Entrada", "preco": 35.00, "disponivel": True},
-
+    {
+        "id": 1,
+        "nome": "Dadinho de Tapioca com Geleia de Pimenta",
+        "categoria": "Entrada",
+        "preco": 28.00,
+        "disponivel": True,
+    },
+    {
+        "id": 2,
+        "nome": "Caldinho de Feijão",
+        "categoria": "Entrada",
+        "preco": 18.50,
+        "disponivel": True,
+    },
+    {
+        "id": 3,
+        "nome": "Porção de Pastéis (Carne, Queijo e Palmito)",
+        "categoria": "Entrada",
+        "preco": 35.00,
+        "disponivel": True,
+    },
     # Pratos Principais
-    {"id": 4, "nome": "Baião de Dois", "categoria": "Prato Principal", "preco": 44.90, "disponivel": True},
-    {"id": 5, "nome": "Acarajé", "categoria": "Prato Principal", "preco": 31.00, "disponivel": False},
-    {"id": 6, "nome": "Feijoada Completa", "categoria": "Prato Principal", "preco": 50.00, "disponivel": True},
-    {"id": 7, "nome": "Moqueca Baiana", "categoria": "Prato Principal", "preco": 65.00, "disponivel": True},
-    {"id": 8, "nome": "Virado à Paulista", "categoria": "Prato Principal", "preco": 30.00, "disponivel": False},
-
+    {
+        "id": 4,
+        "nome": "Baião de Dois",
+        "categoria": "Prato Principal",
+        "preco": 44.90,
+        "disponivel": True,
+    },
+    {
+        "id": 5,
+        "nome": "Acarajé",
+        "categoria": "Prato Principal",
+        "preco": 31.00,
+        "disponivel": False,
+    },
+    {
+        "id": 6,
+        "nome": "Feijoada Completa",
+        "categoria": "Prato Principal",
+        "preco": 50.00,
+        "disponivel": True,
+    },
+    {
+        "id": 7,
+        "nome": "Moqueca Baiana",
+        "categoria": "Prato Principal",
+        "preco": 65.00,
+        "disponivel": True,
+    },
+    {
+        "id": 8,
+        "nome": "Virado à Paulista",
+        "categoria": "Prato Principal",
+        "preco": 30.00,
+        "disponivel": False,
+    },
     # Sobremesas
-    {"id": 9, "nome": "Pudim de Leite Condensado", "categoria": "Sobremesa", "preco": 15.00, "disponivel": True},
-    {"id": 10, "nome": "Mousse de Maracujá", "categoria": "Sobremesa", "preco": 18.00, "disponivel": True},
-    {"id": 11, "nome": "Brigadeiro de Colher", "categoria": "Sobremesa", "preco": 12.00, "disponivel": True}
+    {
+        "id": 9,
+        "nome": "Pudim de Leite Condensado",
+        "categoria": "Sobremesa",
+        "preco": 15.00,
+        "disponivel": True,
+    },
+    {
+        "id": 10,
+        "nome": "Mousse de Maracujá",
+        "categoria": "Sobremesa",
+        "preco": 18.00,
+        "disponivel": True,
+    },
+    {
+        "id": 11,
+        "nome": "Brigadeiro de Colher",
+        "categoria": "Sobremesa",
+        "preco": 12.00,
+        "disponivel": True,
+    },
 ]
 
+
 @router.get("/pratos")
-async def listar_pratos(categoria: Optional[str] = None,
-                        preco_max: Optional[float] = None,
-                        apenas_disponiveis: bool = False):
+async def listar_pratos(
+    categoria: Optional[str] = None,
+    preco_max: Optional[float] = None,
+    apenas_disponiveis: bool = False,
+):
 
     resultado = pratos
 
@@ -39,15 +106,16 @@ async def listar_pratos(categoria: Optional[str] = None,
         resultado = [p for p in resultado if p["disponivel"]]
     return resultado
 
+
 @router.get("/pratos/{prato_id}")
 async def buscar_prato(prato_id: int):
     for prato in pratos:
         if prato["id"] == prato_id:
             return prato
     raise HTTPException(
-        status_code=404,
-        detail=f"Prato com id {prato_id} não encontrado"
+        status_code=404, detail=f"Prato com id {prato_id} não encontrado"
     )
+
 
 @router.get("/pratos/{prato_id}/detalhes")
 async def buscar_detalhes_prato(prato_id: int, formato: str = "completo"):
@@ -59,14 +127,13 @@ async def buscar_detalhes_prato(prato_id: int, formato: str = "completo"):
     raise HTTPException(status_code=404, detail="Prato não encontrado")
 
 
-
 @router.post("/pratos", response_model=PratoOutput)
 async def adicionar_prato(prato: PratoInput):
     novo_id = max(p["id"] for p in pratos) + 1
     novo_prato = {
-        "id": novo_id, 
+        "id": novo_id,
         "criado_em": datetime.now().isoformat(),
-        **prato.model_dump()
+        **prato.model_dump(),
     }
     pratos.append(novo_prato)
     return novo_prato
