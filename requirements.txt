@@ -7,3 +7,5 @@ pydantic
 huggingface_hub
 pydantic_settings
 huggingface_hub
+autoflake
+black
