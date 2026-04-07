@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from typing import Optional
 from datetime import datetime
-from models import PratoInput, PratoOutput, DisponibilidadeInput
+from models import PratoInput, DisponibilidadeInput
 
 router = APIRouter()
 
