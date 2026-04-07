@@ -89,7 +89,7 @@ pratos = [
 ]
 
 
-@router.get("/pratos")
+@router.get("/")
 async def listar_pratos(
     categoria: Optional[str] = None,
     preco_max: Optional[float] = None,
@@ -107,7 +107,7 @@ async def listar_pratos(
     return resultado
 
 
-@router.get("/pratos/{prato_id}")
+@router.get("/{prato_id}")
 async def buscar_prato(prato_id: int):
     for prato in pratos:
         if prato["id"] == prato_id:
@@ -117,7 +117,7 @@ async def buscar_prato(prato_id: int):
     )
 
 
-@router.get("/pratos/{prato_id}/detalhes")
+@router.get("/{prato_id}/detalhes")
 async def buscar_detalhes_prato(prato_id: int, formato: str = "completo"):
     for prato in pratos:
         if prato["id"] == prato_id:
@@ -127,7 +127,7 @@ async def buscar_detalhes_prato(prato_id: int, formato: str = "completo"):
     raise HTTPException(status_code=404, detail="Prato não encontrado")
 
 
-@router.post("/pratos", response_model=PratoOutput)
+@router.post("/")
 async def adicionar_prato(prato: PratoInput):
     novo_id = max(p["id"] for p in pratos) + 1
     novo_prato = {
@@ -139,7 +139,7 @@ async def adicionar_prato(prato: PratoInput):
     return novo_prato
 
 
-@router.post("/pratos/{prato_id}/disponibilidade")
+@router.post("/{prato_id}/disponibilidade")
 async def atualizar_disponibilidade(prato_id: int, body: DisponibilidadeInput):
     # Erro 404: recurso não existe
     prato = next((p for p in pratos if p["id"] == prato_id), None)
