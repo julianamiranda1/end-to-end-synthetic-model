@@ -17,12 +17,12 @@ def test_criar_pedido_com_prato_existente_e_disponivel():
     payload = {
         "prato_id": 1,  # Dadinho de Tapioca - disponível
         "quantidade": 2,
-        "observacao": "Sem pimenta"
+        "observacao": "Sem pimenta",
     }
     response = client.post("/pedidos", json=payload)
     assert response.status_code == 200
     data = response.json()
-    
+
     # Verifica campos esperados
     assert "id" in data
     assert isinstance(data["id"], int)
@@ -62,7 +62,7 @@ def test_valor_total_calculado_corretamente():
     response = client.post("/pedidos", json=payload)
     assert response.status_code == 200
     data = response.json()
-    
+
     # Verifica cálculo do valor total
     valor_esperado = 44.90 * 3
     assert data["valor_total"] == valor_esperado

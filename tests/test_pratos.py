@@ -37,6 +37,7 @@ def test_pratos_disponibilidade_response():
     assert "disponivel" in data
     assert isinstance(data["disponivel"], bool)
 
+
 def test_post_prato_com_dados_validos():
     """POST /pratos com dados válidos cria o prato e retorna os campos esperados"""
     payload = {
@@ -49,7 +50,7 @@ def test_post_prato_com_dados_validos():
     response = client.post("/pratos", json=payload)
     assert response.status_code == 200
     data = response.json()
-    
+
     # Verifica campos esperados
     assert "id" in data
     assert isinstance(data["id"], int)
@@ -107,15 +108,15 @@ def test_prato_criado_aparece_em_get():
     assert post_response.status_code == 200
     novo_prato = post_response.json()
     novo_id = novo_prato["id"]
-    
+
     # Verifica se o prato aparece em GET /pratos
     get_response = client.get("/pratos")
     assert get_response.status_code == 200
     pratos = get_response.json()
-    
+
     prato_encontrado = any(p["id"] == novo_id for p in pratos)
     assert prato_encontrado, f"Prato com id {novo_id} não encontrado em GET /pratos"
-    
+
     # Verifica os dados do prato encontrado
     prato = next(p for p in pratos if p["id"] == novo_id)
     assert prato["nome"] == "Arroz com Frango Especial"
