@@ -1,19 +1,26 @@
+import os
+import logging
 import joblib
-from huggingface_hub import hf_hub_download
+from huggingface_hub import hf_hub_download, login
 
-# Configurações do seu Repositório
+logger = logging.getLogger(__name__)
+
 REPO_ID = "jujumiranda/mlops-churn-prediction"
 FILENAME = "model.pkl"
 
 
-def load_model(force_download: bool = False):
-    """Carrega o modelo do Hugging Face Hub com suporte a cache."""
-    try:
-        local_path = hf_hub_download(
-            repo_id=REPO_ID, filename=FILENAME, force_download=force_download
-        )
-        model = joblib.load(local_path)
-        return model
-    except Exception as e:
-        print(f"Erro ao carregar o modelo: {e}")
-        return None
+def load_model(
+    repo_id: str = REPO_ID,
+    filename: str = FILENAME,
+    force_download: bool = False,
+):
+    token = os.environ.get("HF_TOKEN")
+    if token:
+        login(token=token)
+
+    local_path = hf_hub_download(
+        repo_id=repo_id,
+        filename=filename,
+        force_download=force_download,
+    )
+    return joblib.load(local_path)

@@ -1,8 +1,6 @@
 # tests/test_pratos.py
-from fastapi.testclient import TestClient
+import pytest
 from main import app
-
-client = TestClient(app)
 
 
 def test_pratos_route_exists():
@@ -11,7 +9,8 @@ def test_pratos_route_exists():
     )
 
 
-def test_pratos_response():
+@pytest.mark.smoke
+def test_pratos_response(client):
     response = client.get("/pratos")
     assert response.status_code == 200
     data = response.json()
@@ -29,7 +28,7 @@ def test_pratos_disponibilidade_route_exists():
     )
 
 
-def test_pratos_disponibilidade_response():
+def test_pratos_disponibilidade_response(client):
     payload = {"disponivel": True}
     response = client.post("/pratos/1/disponibilidade", json=payload)
     assert response.status_code == 200
@@ -38,7 +37,8 @@ def test_pratos_disponibilidade_response():
     assert isinstance(data["disponivel"], bool)
 
 
-def test_post_prato_com_dados_validos():
+@pytest.mark.smoke
+def test_post_prato_com_dados_validos(client):
     """POST /pratos com dados válidos cria o prato e retorna os campos esperados"""
     payload = {
         "nome": "Caldo de Cana",
@@ -62,7 +62,8 @@ def test_post_prato_com_dados_validos():
     assert data["disponivel"] is True
 
 
-def test_post_prato_preco_negativo_retorna_422():
+@pytest.mark.validacao
+def test_post_prato_preco_negativo_retorna_422(client):
     """POST /pratos com preço negativo retorna 422"""
     payload = {
         "nome": "Prato Inválido",
@@ -73,7 +74,8 @@ def test_post_prato_preco_negativo_retorna_422():
     assert response.status_code == 422
 
 
-def test_post_prato_nome_muito_curto_retorna_422():
+@pytest.mark.validacao
+def test_post_prato_nome_muito_curto_retorna_422(client):
     """POST /pratos com nome muito curto (menos de 3 caracteres) retorna 422"""
     payload = {
         "nome": "AB",  # Menos de 3 caracteres
@@ -84,7 +86,8 @@ def test_post_prato_nome_muito_curto_retorna_422():
     assert response.status_code == 422
 
 
-def test_post_prato_categoria_invalida_retorna_422():
+@pytest.mark.validacao
+def test_post_prato_categoria_invalida_retorna_422(client):
     """POST /pratos com categoria inválida retorna 422"""
     payload = {
         "nome": "Prato Inválido",
@@ -95,7 +98,8 @@ def test_post_prato_categoria_invalida_retorna_422():
     assert response.status_code == 422
 
 
-def test_prato_criado_aparece_em_get():
+@pytest.mark.smoke
+def test_prato_criado_aparece_em_get(client):
     """O prato criado aparece em GET /pratos depois de criado"""
     # Cria um novo prato
     payload = {
@@ -122,3 +126,60 @@ def test_prato_criado_aparece_em_get():
     assert prato["nome"] == "Arroz com Frango Especial"
     assert prato["categoria"] == "Prato Principal"
     assert prato["preco"] == 42.50
+
+# Testes Parametrizados
+
+@pytest.mark.validacao
+@pytest.mark.parametrize(
+    "categoria_invalida",
+    [
+        "Bebida",
+        "Dessert",
+        "Main Course",
+        "Categoria Inválida",
+    ],
+)
+def test_post_prato_categorias_invalidas_retornam_422(client, categoria_invalida):
+    """POST /pratos com categorias inválidas retorna 422"""
+    payload = {
+        "nome": "Prato Teste",
+        "categoria": categoria_invalida,
+        "preco": 15.00,
+    }
+    response = client.post("/pratos", json=payload)
+    assert response.status_code == 422
+
+
+@pytest.mark.validacao
+@pytest.mark.parametrize(
+    "prato_id",
+    [
+        9999,
+        123456,
+        10000,
+        50000,
+    ],
+)
+def test_buscar_prato_inexistente_retorna_404(client, prato_id):
+    """GET /pratos/{prato_id} com IDs inexistentes retorna 404"""
+    response = client.get(f"/pratos/{prato_id}")
+    assert response.status_code == 404
+
+
+@pytest.mark.parametrize(
+    "categoria",
+    [
+        "Entrada",
+        "Prato Principal",
+        "Sobremesa",
+    ],
+)
+def test_listar_pratos_filtro_categoria(client, categoria):
+    """GET /pratos?categoria=X retorna apenas pratos da categoria especificada"""
+    response = client.get(f"/pratos?categoria={categoria}")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    # Todos os pratos retornados devem ser da categoria especificada
+    for prato in data:
+        assert prato["categoria"] == categoria

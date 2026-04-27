@@ -1,8 +1,6 @@
 # tests/test_pedidos.py
-from fastapi.testclient import TestClient
+import pytest
 from main import app
-
-client = TestClient(app)
 
 
 def test_pedidos_route_exists():
@@ -13,7 +11,8 @@ def test_pedidos_route_exists():
     )
 
 
-def test_criar_pedido_com_prato_existente_e_disponivel():
+@pytest.mark.smoke
+def test_criar_pedido_com_prato_existente_e_disponivel(client):
     """Criação de pedido com prato existente e disponível retorna 200 com dados corretos"""
     payload = {
         "prato_id": 1,  # Dadinho de Tapioca - disponível
@@ -34,7 +33,8 @@ def test_criar_pedido_com_prato_existente_e_disponivel():
     assert data["observacao"] == "Sem pimenta"
 
 
-def test_criar_pedido_prato_inexistente_retorna_404():
+@pytest.mark.validacao
+def test_criar_pedido_prato_inexistente_retorna_404(client):
     """Tentativa de pedido com prato inexistente retorna 404"""
     payload = {
         "prato_id": 9999,  # ID que não existe
@@ -44,7 +44,8 @@ def test_criar_pedido_prato_inexistente_retorna_404():
     assert response.status_code == 404
 
 
-def test_criar_pedido_prato_indisponivel_retorna_400():
+@pytest.mark.validacao
+def test_criar_pedido_prato_indisponivel_retorna_400(client):
     """Tentativa de pedido com prato indisponível retorna 400"""
     payload = {
         "prato_id": 5,  # Acarajé - indisponível
@@ -54,7 +55,8 @@ def test_criar_pedido_prato_indisponivel_retorna_400():
     assert response.status_code == 400
 
 
-def test_valor_total_calculado_corretamente():
+@pytest.mark.smoke
+def test_valor_total_calculado_corretamente(client):
     """O valor total calculado está correto (preco × quantidade)"""
     payload = {
         "prato_id": 4,  # Baião de Dois - R$ 44.90
@@ -70,7 +72,8 @@ def test_valor_total_calculado_corretamente():
     assert data["quantidade"] == 3
 
 
-def test_criar_pedido_quantidade_minima():
+@pytest.mark.smoke
+def test_criar_pedido_quantidade_minima(client):
     """Criação de pedido com quantidade mínima (1)"""
     payload = {
         "prato_id": 6,  # Feijoada Completa - disponível
@@ -83,7 +86,7 @@ def test_criar_pedido_quantidade_minima():
     assert data["valor_total"] == 50.00  # Preço do prato
 
 
-def test_criar_pedido_quantidade_grande():
+def test_criar_pedido_quantidade_grande(client):
     """Criação de pedido com quantidade grande"""
     payload = {
         "prato_id": 9,  # Pudim de Leite Condensado - R$ 15.00
@@ -96,7 +99,7 @@ def test_criar_pedido_quantidade_grande():
     assert data["valor_total"] == 150.00
 
 
-def test_criar_pedido_sem_observacao():
+def test_criar_pedido_sem_observacao(client):
     """Criação de pedido sem observação adicional"""
     payload = {
         "prato_id": 7,  # Moqueca Baiana - disponível
@@ -108,7 +111,8 @@ def test_criar_pedido_sem_observacao():
     assert data["observacao"] is None
 
 
-def test_criar_pedido_quantidade_zero_retorna_422():
+@pytest.mark.validacao
+def test_criar_pedido_quantidade_zero_retorna_422(client):
     """Criação de pedido com quantidade zero retorna 422"""
     payload = {
         "prato_id": 1,
@@ -118,7 +122,8 @@ def test_criar_pedido_quantidade_zero_retorna_422():
     assert response.status_code == 422
 
 
-def test_criar_pedido_quantidade_negativa_retorna_422():
+@pytest.mark.validacao
+def test_criar_pedido_quantidade_negativa_retorna_422(client):
     """Criação de pedido com quantidade negativa retorna 422"""
     payload = {
         "prato_id": 1,

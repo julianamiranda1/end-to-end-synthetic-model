@@ -6,8 +6,20 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  MODEL_VERSION: "1.0.0"  # bumpa aqui quando publicar novo modelo no HF Hub
+
 jobs:
-  verificar-sintaxe:
+  # ─────────────────────────────────────────────────────
+  # JOB 1: qualidade
+  # Roda em todo push e PR — feedback rápido, sem secrets.
+  # Requer: black e autoflake no requirements-dev.txt
+  # ─────────────────────────────────────────────────────
+  qualidade:
     runs-on: ubuntu-latest
 
     steps:
@@ -18,12 +30,22 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
 
       - name: Instalar dependências
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install autoflake black
+          pip install -r requirements-dev.txt
+
+      - name: Diagnóstico do ambiente
+        run: |
+          python --version
+          pip list
+          test -f main.py          && echo "✅ main.py"          || echo "❌ main.py ausente"
+          test -f requirements.txt && echo "✅ requirements.txt" || echo "❌ requirements.txt ausente"
+          test -d tests/           && echo "✅ tests/"           || echo "❌ tests/ ausente"
+          test -f model_utils.py   && echo "✅ model_utils.py"   || echo "❌ model_utils.py ausente"
 
       - name: Verificar imports não utilizados
         run: autoflake --check --remove-all-unused-imports --recursive .
@@ -31,9 +53,27 @@ jobs:
       - name: Verificar formatação
         run: black --check .
 
-  verificar-api:
+      - name: Rodar testes smoke (PRs)
+        if: github.event_name == 'pull_request'
+        run: python -m pytest tests/ -m smoke -q --tb=short
+
+      - name: Rodar testes smoke (push)
+        if: github.event_name == 'push'
+        run: python -m pytest tests/ -m smoke -q --tb=short
+
+  # ─────────────────────────────────────────────────────
+  # JOB 2: integracao
+  # Roda apenas em push para main/develop, após qualidade passar.
+  # Secrets não disponíveis em PRs de forks externos —
+  # por isso restrito a pushes diretos.
+  # ─────────────────────────────────────────────────────
+  integracao:
     runs-on: ubuntu-latest
-    needs: verificar-sintaxe
+    needs: qualidade
+    if: github.event_name == 'push'
+
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
 
     steps:
       - name: Baixar o código
@@ -43,22 +83,76 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
 
       - name: Instalar dependências
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          python -m pip install pytest
+          pip install -r requirements-dev.txt
+
+      - name: Cache do modelo (Hugging Face)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-model-py3.11-v${{ env.MODEL_VERSION }}
+
+      - name: Diagnóstico do ambiente
+        run: |
+          python --version
+          test -f model_utils.py && echo "✅ model_utils.py" || echo "❌ model_utils.py ausente"
+          if [ -n "$HF_TOKEN" ]; then echo "✅ HF_TOKEN definido"; else echo "⚠️  HF_TOKEN ausente"; fi
+
+      - name: Verificar autenticação com Hugging Face
+        run: python -c "import os; assert os.environ.get('HF_TOKEN'), 'HF_TOKEN não configurado'"
 
       - name: Iniciar API em background
-        run: |
-          uvicorn main:app --host 0.0.0.0 --port 8000 &
-          sleep 10
+        run: uvicorn main:app --host 0.0.0.0 --port 8000 &
 
-      - name: Verificar que a API responde
+      - name: Aguardar API ficar pronta
         run: |
-          curl -X GET "http://localhost:8000/health"
-          echo "API respondeu com sucesso"
-          
-      - name: Rodar testes
-        run: python -m pytest tests/ -q
+          for i in $(seq 1 15); do
+            if curl -sf http://localhost:8000/health; then
+              echo "API pronta após ${i} tentativas."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "API não respondeu após 30s." >&2
+          exit 1
+
+      - name: Verificar health check
+        run: |
+          STATUS=$(curl -sf -o /dev/null -w "%{http_code}" http://localhost:8000/health)
+          echo "Status HTTP: $STATUS"
+          [ "$STATUS" = "200" ] || (echo "Health check falhou!" && exit 1)
+
+      - name: Rodar testes de integração
+        run: python -m pytest tests/ -m integracao -v --tb=short
+
+  # ─────────────────────────────────────────────────────
+  # JOB 3: relatorio
+  # Roda após integração passar — ponto de extensão para
+  # deploy, notificação ou publicação de artefato.
+  # ─────────────────────────────────────────────────────
+  relatorio:
+    runs-on: ubuntu-latest
+    needs: integracao
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Resumo do pipeline
+        run: |
+          echo "================================================"
+          echo "  Pipeline CI da Churn API concluído ✅"
+          echo "================================================"
+          echo "  Branch:  ${{ github.ref_name }}"
+          echo "  Commit:  ${{ github.sha }}"
+          echo "  Autor:   ${{ github.actor }}"
+          echo "  Modelo:  v${{ env.MODEL_VERSION }}"
+          echo "================================================"
+          echo "  Próximo passo: configurar deploy automático"
+          echo "================================================"

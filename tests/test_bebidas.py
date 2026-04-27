@@ -1,8 +1,6 @@
 # tests/test_bebidas.py
-from fastapi.testclient import TestClient
+import pytest
 from main import app
-
-client = TestClient(app)
 
 
 def test_bebidas_route_exists():
@@ -13,7 +11,8 @@ def test_bebidas_route_exists():
     )
 
 
-def test_listar_bebidas_geral():
+@pytest.mark.smoke
+def test_listar_bebidas_geral(client):
     """Listagem geral de bebidas retorna lista com itens"""
     response = client.get("/bebidas")
     assert response.status_code == 200
@@ -27,7 +26,7 @@ def test_listar_bebidas_geral():
     assert "alcoolica" in data[0]
 
 
-def test_listar_bebidas_com_filtro_tipo():
+def test_listar_bebidas_com_filtro_tipo(client):
     """Listagem de bebidas filtrada por tipo retorna apenas bebidas do tipo especificado"""
     response = client.get("/bebidas?tipo=Suco")
     assert response.status_code == 200
@@ -38,7 +37,7 @@ def test_listar_bebidas_com_filtro_tipo():
         assert bebida["tipo"] == "Suco"
 
 
-def test_listar_bebidas_com_filtro_alcoolica():
+def test_listar_bebidas_com_filtro_alcoolica(client):
     """Listagem de bebidas filtrada por alcoolica retorna apenas bebidas alcoólicas"""
     response = client.get("/bebidas?alcoolica=true")
     assert response.status_code == 200
@@ -48,7 +47,7 @@ def test_listar_bebidas_com_filtro_alcoolica():
         assert bebida["alcoolica"] is True
 
 
-def test_listar_bebidas_nao_alcoolicas():
+def test_listar_bebidas_nao_alcoolicas(client):
     """Listagem de bebidas não alcoólicas retorna apenas bebidas sem álcool"""
     response = client.get("/bebidas?alcoolica=false")
     assert response.status_code == 200
@@ -58,7 +57,8 @@ def test_listar_bebidas_nao_alcoolicas():
         assert bebida["alcoolica"] is False
 
 
-def test_buscar_bebida_existente():
+@pytest.mark.smoke
+def test_buscar_bebida_existente(client):
     """Busca por ID existente retorna a bebida"""
     response = client.get("/bebidas/1")
     assert response.status_code == 200
@@ -70,13 +70,14 @@ def test_buscar_bebida_existente():
     assert "alcoolica" in data
 
 
-def test_buscar_bebida_inexistente():
+def test_buscar_bebida_inexistente(client):
     """Busca por ID inexistente retorna 404"""
     response = client.get("/bebidas/9999")
     assert response.status_code == 404
 
 
-def test_criar_bebida_com_dados_validos():
+@pytest.mark.smoke
+def test_criar_bebida_com_dados_validos(client):
     """Criação de bebida com dados válidos"""
     payload = {
         "nome": "Vinho Tinto",
@@ -98,7 +99,8 @@ def test_criar_bebida_com_dados_validos():
     assert data["volume_ml"] == 750
 
 
-def test_criar_bebida_nome_muito_curto():
+@pytest.mark.validacao
+def test_criar_bebida_nome_muito_curto(client):
     """Criação de bebida com nome muito curto retorna 422"""
     payload = {
         "nome": "AB",  # Menos de 3 caracteres
@@ -111,7 +113,8 @@ def test_criar_bebida_nome_muito_curto():
     assert response.status_code == 422
 
 
-def test_criar_bebida_preco_negativo():
+@pytest.mark.validacao
+def test_criar_bebida_preco_negativo(client):
     """Criação de bebida com preço negativo retorna 422"""
     payload = {
         "nome": "Bebida Inválida",
@@ -124,7 +127,8 @@ def test_criar_bebida_preco_negativo():
     assert response.status_code == 422
 
 
-def test_criar_bebida_tipo_invalido():
+@pytest.mark.validacao
+def test_criar_bebida_tipo_invalido(client):
     """Criação de bebida com tipo inválido retorna 422"""
     payload = {
         "nome": "Bebida Inválida",
@@ -137,7 +141,8 @@ def test_criar_bebida_tipo_invalido():
     assert response.status_code == 422
 
 
-def test_criar_bebida_volume_invalido_muito_pequeno():
+@pytest.mark.validacao
+def test_criar_bebida_volume_invalido_muito_pequeno(client):
     """Criação de bebida com volume muito pequeno retorna 422"""
     payload = {
         "nome": "Bebida Pequena",
@@ -150,7 +155,8 @@ def test_criar_bebida_volume_invalido_muito_pequeno():
     assert response.status_code == 422
 
 
-def test_criar_bebida_volume_invalido_muito_grande():
+@pytest.mark.validacao
+def test_criar_bebida_volume_invalido_muito_grande(client):
     """Criação de bebida com volume muito grande retorna 422"""
     payload = {
         "nome": "Bebida Grande",
