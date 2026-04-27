@@ -21,6 +21,7 @@ PAYLOAD_VALIDO = {
 
 # ── Fixtures ───────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture(scope="module")
 def modelo():
     return load_model(REPO_ID, filename=FILENAME)
@@ -34,11 +35,12 @@ def client():
 
 # ── Testes do modelo ───────────────────────────────────────────────────────────
 
+
 @pytest.mark.integracao
 def test_modelo_nao_e_none(modelo):
-    assert modelo is not None, (
-        "load_model() retornou None — verifique HF_TOKEN e REPO_ID."
-    )
+    assert (
+        modelo is not None
+    ), "load_model() retornou None — verifique HF_TOKEN e REPO_ID."
 
 
 @pytest.mark.integracao
@@ -81,6 +83,7 @@ def test_cliente_ativo_classificado_corretamente(modelo):
 
 # ── Testes do endpoint /ml/predict ─────────────────────────────────────────────
 
+
 @pytest.mark.integracao
 def test_endpoint_payload_valido_retorna_200(client):
     response = client.post("/ml/predict", json=PAYLOAD_VALIDO)
@@ -121,8 +124,9 @@ def test_endpoint_label_e_string_nao_vazia(client):
 
 @pytest.mark.integracao
 def test_endpoint_campo_obrigatorio_ausente_retorna_422(client):
-    payload_incompleto = {k: v for k, v in PAYLOAD_VALIDO.items()
-                          if k != "avaliacao_media"}
+    payload_incompleto = {
+        k: v for k, v in PAYLOAD_VALIDO.items() if k != "avaliacao_media"
+    }
     response = client.post("/ml/predict", json=payload_incompleto)
     assert response.status_code == 422
 
@@ -140,26 +144,27 @@ def test_endpoint_valor_negativo_retorna_422(client):
     response = client.post("/ml/predict", json=payload_invalido)
     assert response.status_code == 422
 
+
 # ── Payloads de sanidade — construídos a partir da lógica do gerar_dataset ────
 #
 # CHURN ÓBVIO: todas as features no extremo do intervalo de churn=1
 #   dias >> 90, poucos pedidos, muitos cancelamentos, avaliação baixa
 PAYLOAD_CHURN_OBVIO = {
     "dias_desde_ultimo_pedido": 250,  # intervalo churn: 90–270
-    "pedidos_ultimo_semestre": 1,     # intervalo churn: 1–3
-    "reservas_canceladas": 4,         # intervalo churn: 1–4
-    "ticket_medio": 120.00,           # irrelevante — mesma distribuição nas duas classes
-    "avaliacao_media": 1.2,           # intervalo churn: 1.0–3.8
+    "pedidos_ultimo_semestre": 1,  # intervalo churn: 1–3
+    "reservas_canceladas": 4,  # intervalo churn: 1–4
+    "ticket_medio": 120.00,  # irrelevante — mesma distribuição nas duas classes
+    "avaliacao_media": 1.2,  # intervalo churn: 1.0–3.8
 }
 
 # ATIVO ÓBVIO: todas as features no extremo do intervalo de churn=0
 #   dias << 90, muitos pedidos, sem cancelamentos, avaliação alta
 PAYLOAD_ATIVO_OBVIO = {
-    "dias_desde_ultimo_pedido": 5,    # intervalo ativo: 1–89
-    "pedidos_ultimo_semestre": 22,    # intervalo ativo: 4–24
-    "reservas_canceladas": 0,         # intervalo ativo: 0–1
-    "ticket_medio": 120.00,           # irrelevante — mesma distribuição nas duas classes
-    "avaliacao_media": 4.9,           # intervalo ativo: 3.5–5.0
+    "dias_desde_ultimo_pedido": 5,  # intervalo ativo: 1–89
+    "pedidos_ultimo_semestre": 22,  # intervalo ativo: 4–24
+    "reservas_canceladas": 0,  # intervalo ativo: 0–1
+    "ticket_medio": 120.00,  # irrelevante — mesma distribuição nas duas classes
+    "avaliacao_media": 4.9,  # intervalo ativo: 3.5–5.0
 }
 
 

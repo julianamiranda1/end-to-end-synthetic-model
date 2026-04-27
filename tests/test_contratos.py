@@ -1,5 +1,6 @@
 # tests/test_contratos.py
 
+
 def test_get_prato_por_id_schema(client):
     """Valida o schema de resposta de GET /pratos/{id}"""
     response = client.get("/pratos/1")

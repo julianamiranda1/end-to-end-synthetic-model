@@ -127,7 +127,9 @@ def test_prato_criado_aparece_em_get(client):
     assert prato["categoria"] == "Prato Principal"
     assert prato["preco"] == 42.50
 
+
 # Testes Parametrizados
+
 
 @pytest.mark.validacao
 @pytest.mark.parametrize(

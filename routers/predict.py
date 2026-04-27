@@ -32,13 +32,17 @@ async def predict(data: ChurnInput, request: Request):
     if model is None:
         raise HTTPException(status_code=503, detail="Modelo não carregado no servidor.")
 
-    features = np.array([[
-        data.dias_desde_ultimo_pedido,
-        data.pedidos_ultimo_semestre,
-        data.reservas_canceladas,
-        data.ticket_medio,
-        data.avaliacao_media,
-    ]])
+    features = np.array(
+        [
+            [
+                data.dias_desde_ultimo_pedido,
+                data.pedidos_ultimo_semestre,
+                data.reservas_canceladas,
+                data.ticket_medio,
+                data.avaliacao_media,
+            ]
+        ]
+    )
 
     prediction = int(model.predict(features)[0])
     probabilidade = model.predict_proba(features)[0].tolist()
