@@ -1,6 +1,4 @@
 # tests/test_contratos.py
-import pytest
-
 
 def test_get_prato_por_id_schema(client):
     """Valida o schema de resposta de GET /pratos/{id}"""
