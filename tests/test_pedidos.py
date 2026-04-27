@@ -8,7 +8,8 @@ client = TestClient(app)
 def test_pedidos_route_exists():
     """Verifica se a rota POST /pedidos existe"""
     assert any(
-        route.path == "/pedidos" and "POST" in route.methods for route in app.routes
+        route.path in ("/pedidos", "/pedidos/") and "POST" in route.methods
+        for route in app.routes
     )
 
 

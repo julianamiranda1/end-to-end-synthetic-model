@@ -38,7 +38,7 @@ bebidas = [
 ]
 
 
-@router.get("/bebidas")
+@router.get("/")
 async def listar_bebidas(tipo: Optional[str] = None, alcoolica: Optional[bool] = None):
 
     resultado = bebidas
@@ -50,7 +50,7 @@ async def listar_bebidas(tipo: Optional[str] = None, alcoolica: Optional[bool] =
     return resultado
 
 
-@router.get("/bebidas/{bebida_id}")
+@router.get("/{bebida_id}")
 async def buscar_bebida(bebida_id: int):
     for bebida in bebidas:
         if bebida["id"] == bebida_id:
@@ -58,7 +58,7 @@ async def buscar_bebida(bebida_id: int):
     raise HTTPException(status_code=404, detail="Bebida não encontrada")
 
 
-@router.post("/bebidas", response_model=BebidaOutput)
+@router.post("/", response_model=BebidaOutput)
 async def adicionar_bebida(bebida: BebidaInput):
     novo_id = max(b["id"] for b in bebidas) + 1
     nova_bebida = {

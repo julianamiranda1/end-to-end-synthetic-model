@@ -5,7 +5,7 @@ from routers.pratos import pratos
 router = APIRouter()
 
 
-@router.post("/pedidos", response_model=PedidoOutput)
+@router.post("/", response_model=PedidoOutput)
 async def criar_pedido(pedido: PedidoInput):
     prato = next((p for p in pratos if p["id"] == pedido.prato_id), None)
     if not prato:
