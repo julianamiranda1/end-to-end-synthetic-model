@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 import pytest
 import numpy as np
 from fastapi.testclient import TestClient
@@ -48,6 +51,31 @@ def test_load_model_exige_hf_token_quando_nao_presente(monkeypatch):
 
     with pytest.raises(RuntimeError, match="HF_TOKEN"):
         load_model(REPO_ID, filename=FILENAME)
+
+
+def test_load_model_usa_cache_fallback_quando_home_nao_e_escrita(monkeypatch, tmp_path):
+    monkeypatch.setenv("HF_TOKEN", "fake-token")
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.delenv("HF_HOME", raising=False)
+    monkeypatch.delenv("HF_HUB_CACHE", raising=False)
+    monkeypatch.delenv("HUGGINGFACE_HUB_CACHE", raising=False)
+
+    original_mkdir = Path.mkdir
+
+    def guarded_mkdir(path, *args, **kwargs):
+        if str(path).startswith("/home/app"):
+            raise PermissionError("sem permissao")
+        return original_mkdir(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "mkdir", guarded_mkdir)
+    monkeypatch.setattr(model_utils, "hf_hub_download", lambda **kwargs: str(tmp_path / "model.pkl"))
+    monkeypatch.setattr(model_utils, "login", lambda *args, **kwargs: None)
+    monkeypatch.setattr(model_utils.joblib, "load", lambda path: {"ok": True})
+
+    resultado = load_model(REPO_ID, filename=FILENAME)
+
+    assert resultado == {"ok": True}
+    assert Path(os.environ["HF_HUB_CACHE"]) == tmp_path / ".cache" / "huggingface"
 
 
 @pytest.mark.integracao
