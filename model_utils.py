@@ -21,7 +21,9 @@ def _resolve_cache_dir() -> Path:
             candidates.append(Path(value).expanduser())
 
     if os.environ.get("XDG_CACHE_HOME"):
-        candidates.append(Path(os.environ["XDG_CACHE_HOME"]).expanduser() / "huggingface")
+        candidates.append(
+            Path(os.environ["XDG_CACHE_HOME"]).expanduser() / "huggingface"
+        )
 
     home_dir = Path(os.environ.get("HOME") or str(Path.home())).expanduser()
     candidates.append(home_dir / ".cache" / "huggingface")
@@ -38,7 +40,9 @@ def _resolve_cache_dir() -> Path:
         except (PermissionError, OSError):
             continue
 
-    raise RuntimeError("Não foi possível criar um diretório de cache do Hugging Face acessível.")
+    raise RuntimeError(
+        "Não foi possível criar um diretório de cache do Hugging Face acessível."
+    )
 
 
 def load_model(

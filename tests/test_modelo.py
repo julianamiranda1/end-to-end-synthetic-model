@@ -68,7 +68,9 @@ def test_load_model_usa_cache_fallback_quando_home_nao_e_escrita(monkeypatch, tm
         return original_mkdir(path, *args, **kwargs)
 
     monkeypatch.setattr(Path, "mkdir", guarded_mkdir)
-    monkeypatch.setattr(model_utils, "hf_hub_download", lambda **kwargs: str(tmp_path / "model.pkl"))
+    monkeypatch.setattr(
+        model_utils, "hf_hub_download", lambda **kwargs: str(tmp_path / "model.pkl")
+    )
     monkeypatch.setattr(model_utils, "login", lambda *args, **kwargs: None)
     monkeypatch.setattr(model_utils.joblib, "load", lambda path: {"ok": True})
 
