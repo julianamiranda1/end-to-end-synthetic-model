@@ -73,7 +73,7 @@ app.include_router(reservas.router, prefix="/reservas", tags=["Reservas"])
 async def root():
     return {
         "restaurante": "Santo Garfo",
-        "mensagem": "Bem-vindo à nossa API",
+        "mensagem": "Olá do contêiner!",
         "chef": "Juliana Miranda",
         "cidade": "São Paulo",
         "especialidade": "Comida brasileira",

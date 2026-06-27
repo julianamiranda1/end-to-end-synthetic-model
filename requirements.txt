@@ -9,3 +9,4 @@ pydantic_settings
 huggingface_hub
 autoflake
 black
+requests

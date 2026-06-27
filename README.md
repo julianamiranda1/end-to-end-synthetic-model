@@ -1,64 +1,300 @@
 ---
 language: pt
 tags:
-  - sklearn
-  - classification
-  - customer-churn
-  - restaurant-analytics
+  - fastapi
   - mlops
+  - restaurant-api
+  - churn-prediction
+  - testes
 ---
 
-# Churn Predictor - Santo Garfo v1
+# Santo Garfo API + Churn Predictor
 
-Modelo de classificação binária desenvolvido para prever a probabilidade de **churn** (evasão) de clientes do restaurante Santo Garfo, em São Paulo. 
+Projeto completo de aplicação que une uma API de restaurante com um serviço de inferência de machine learning. Desenvolvido com base nos cadernos da disciplina de **MLOps**, o repositório mostra como estruturar uma aplicação realista com:
 
-Este projeto faz parte do curso de MLOps (Semana 3) e foca na integração entre treinamento de modelos, serialização e serviço via API FastAPI.
+- API REST para **pratos**, **bebidas**, **pedidos** e **reservas**
+- Modelo de churn criado e treinado pelo autor
+- Integração com o **Hugging Face Hub** para versionamento do artefato
+- Validações de negócio com **Pydantic**
+- Tratamento customizado de erros e respostas JSON consistentes
+- Testes unitários, de contrato e de integração com **pytest**
 
-## Uso Rápido
+## Objetivo
 
-Para carregar o modelo e realizar uma predição em Python:
+Construir uma aplicação que simule um restaurante e, ao mesmo tempo, permita:
 
-```python
-from huggingface_hub import hf_hub_download
-import joblib
-import numpy as np
+- expor serviços de domínio via API
+- consumir um modelo de churn em produção
+- garantir contratos de dados e validação de entrada
+- manter cobertura de testes e qualidade de código
 
-# Download do artefato
-repo_id = "seu-usuario/churn-santo-garfo"
-model_path = hf_hub_download(repo_id=repo_id, filename="modelo_churn_restaurante.pkl")
-model = joblib.load(model_path)
+## Arquitetura do projeto
 
-# Feature: [recencia, pedidos, cancelamentos, ticket, nota]
-data = np.array([[120, 1, 4, 85.50, 2.1]])
-prediction = model.predict(data)
-print(f"Resultado: {'Churn' if prediction[0] == 1 else 'Ativo'}")
+A solução é organizada em camadas claras:
+
+- `main.py`
+  - instância a aplicação FastAPI
+  - define `lifespan` para carregar o modelo no startup
+  - utiliza handlers customizados para erros 422 e HTTP
+  - registra routers por domínio
+- `config.py`
+  - configurações de ambiente via `pydantic-settings`
+  - parâmetros de negócio como número máximo de mesas e pessoas por mesa
+- `model_utils.py`
+  - baixa e carrega o modelo do Hugging Face Hub
+  - permite autenticação via `HF_TOKEN`
+- `routers/`
+  - organiza rotas em módulos específicos de recurso
+- `models/`
+  - schemas Pydantic para request e response
+  - regras de validação de domínio
+- `tests/`
+  - casos de teste que asseguram comportamento esperado e contratos
+
+## Estrutura do repositório
+
+```text
+.
+├── config.py
+├── main.py
+├── model_utils.py
+├── models
+│   ├── bebidas.py
+│   ├── pedidos.py
+│   ├── pratos.py
+│   └── reservas.py
+├── routers
+│   ├── bebidas.py
+│   ├── pedidos.py
+│   ├── pratos.py
+│   ├── predict.py
+│   └── reservas.py
+├── tests
+│   ├── test_bebidas.py
+│   ├── test_contratos.py
+│   ├── test_main.py
+│   ├── test_modelo.py
+│   ├── test_pedidos.py
+│   ├── test_pratos.py
+│   └── test_saude.py
+├── requirements.txt
+├── requirements-dev.txt
+└── README.md
 ```
 
-## Features de entrada
-| Feature                 | Tipo  | Descrição                                                   |
-|-------------------------|-------|-------------------------------------------------------------|
-| dias_desde_ultimo_pedido| int   | Recência: Dias desde a última visita (Churn > 90 dias).     |
-| pedidos_ultimo_semestre | int   | Frequência: Total de pedidos realizados nos últimos 6 meses.|
-| reservas_canceladas     | int   | Atrito: Quantidade de reservas não comparecidas/canceladas. |
-| ticket_medio            | float | Monetário: Valor médio gasto por pedido (R$).               |
-| avaliacao_media         | float | Satisfação: Nota média dada pelo cliente (1.0 a 5.0).       |
+## Recursos implementados
 
+### API de restaurante
 
-## Métricas (test set: 20%)
-O modelo apresentou performance excelente no conjunto de teste:
-- **Precision (Churn):** 1.00
-- **Recall (Churn):** 1.00
-- **F1-Score (Churn):** 1.00
-- **Amostras de Teste:** 400
-- **Nota Técnica:** O score perfeito (1.0) reflete a separabilidade clara das classes no dataset sintético gerado. Em dados reais, ruídos de mercado e comportamentos atípicos tenderiam a normalizar essas métricas.
+- Cadastro e consulta de **pratos**
+- Filtros por categoria, preço e disponibilidade
+- Cadastro e consulta de **bebidas**
+- Filtros por tipo e teor alcoólico
+- Criação de **pedidos** com cálculo de valor total
+- Criação e gerenciamento de **reservas** com checagem de conflito por mesa
+
+### Serviço de machine learning
+
+- Endpoint `/ml/predict` para inferência de churn
+- Modelo treinado pelo autor e hospedado no Hugging Face Hub
+- Inferência com retorno de probabilidade e label amigável
+- Health check que confirma se o modelo está carregado
+
+## Endpoints detalhados
+
+### Informações gerais
+
+- `GET /`
+  - retorna informações estáticas sobre o restaurante
+- `GET /health`
+  - retorna estado da aplicação e saúde do modelo
+
+### Machine Learning
+
+- `POST /ml/predict`
+  - entrada: dados de cliente
+  - saída: `prediction`, `probability`, `label`, `model_version`
+
+### Pratos
+
+- `GET /pratos`
+  - lista todos os pratos
+  - aceita filtros: `categoria`, `preco_max`, `apenas_disponiveis`
+- `GET /pratos/{prato_id}`
+  - busca prato por ID
+- `POST /pratos`
+  - cria um novo prato
+- `POST /pratos/{prato_id}/disponibilidade`
+  - atualiza disponibilidade do prato
+
+### Bebidas
+
+- `GET /bebidas`
+  - lista bebidas
+  - aceita filtros: `tipo`, `alcoolica`
+- `GET /bebidas/{bebida_id}`
+  - busca bebida por ID
+- `POST /bebidas`
+  - cria bebida nova
+
+### Pedidos
+
+- `POST /pedidos`
+  - cria pedido e calcula total
+  - valida se o prato existe e está disponível
+
+### Reservas
+
+- `POST /reservas`
+  - cria reserva com verificação de conflito por mesa
+- `GET /reservas`
+  - lista reservas ativas e filtra por data
+- `GET /reservas/mesa/{numero}`
+  - retorna reservas por número de mesa
+- `GET /reservas/{reserva_id}`
+  - busca reserva específica
+- `DELETE /reservas/{reserva_id}`
+  - cancela reserva
+
+## Modelo de churn
+
+O modelo foi criado pelo autor como parte do desenvolvimento do projeto e depois publicado em `jujumiranda/mlops-churn-prediction`.
+
+### Objetivo do modelo
+
+Prever se um cliente do restaurante está em risco de churn (evasão) com base em características de comportamento e satisfação.
+
+### Features utilizadas
+
+- `dias_desde_ultimo_pedido`
+- `pedidos_ultimo_semestre`
+- `reservas_canceladas`
+- `ticket_medio`
+- `avaliacao_media`
+
+### Interpretação dos campos
+
+- `dias_desde_ultimo_pedido`: recência em dias desde a última visita
+- `pedidos_ultimo_semestre`: frequência de pedidos no último semestre
+- `reservas_canceladas`: número de cancelamentos de reserva
+- `ticket_medio`: gasto médio por pedido
+- `avaliacao_media`: nota média dada pelo cliente
+
+### Exemplo de payload
+
+```json
+{
+  "dias_desde_ultimo_pedido": 95,
+  "pedidos_ultimo_semestre": 2,
+  "reservas_canceladas": 2,
+  "ticket_medio": 42.0,
+  "avaliacao_media": 2.5
+}
+```
+
+### Exemplo de resposta
+
+```json
+{
+  "prediction": 1,
+  "probability": 0.9245,
+  "label": "Inativo/Risco",
+  "model_version": "1.0.0"
+}
+```
+
+### Observações sobre o modelo
+
+- Criado e treinado como parte do projeto
+- Publicado no Hugging Face Hub para versionamento e carregamento dinâmico
+- Ideal para demonstração; precisa de retreinamento com dados reais para uso em produção
+- O endpoint usa `model.predict` e `model.predict_proba`
+
+## Regras de validação de domínio
+
+- `PratoInput`
+  - valida nome, categoria, preço e opção de preço promocional
+  - garante desconto máximo de 50%
+- `BebidaInput`
+  - valida nome, tipo, preço, teor alcoólico e volume
+- `PedidoInput`
+  - valida `quantidade` > 0
+  - só aceita pedido se o prato existir e estiver disponível
+- `ReservaInput`
+  - valida mesa e número de pessoas
+  - exige antecedência mínima de 1 hora
+  - verifica conflito de reserva por mesa
+
+## Como rodar localmente
+
+### Configuração do ambiente
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+### Executar o servidor
+
+```powershell
+uvicorn main:app --reload
+```
+
+### Documentação automática
+
+A documentação interativa estará disponível em `http://127.0.0.1:8000/docs`.
+
+### Variáveis de ambiente
+
+- `HF_TOKEN`
+  - token de autenticação Hugging Face (opcional)
+
+## Testes
+
+### Executar testes
+
+```powershell
+pytest
+```
+
+### O que é testado
+
+- existência das rotas principais
+- respostas e contratos JSON
+- cenários de validação de entradas
+- lógica de criação de pedidos e reservas
+- integração com o modelo de churn
 
 ## Dependências
 
-- scikit-learn >= 1.0
-- joblib
-- huggingface_hub
-- numpy
+Dependências principais:
 
-## Limitações e Ética
-- **Dados Sintéticos:** Este modelo não deve ser utilizado em um ambiente de produção real sem retreinamento com dados históricos reais do estabelecimento.
-- **Viés de Regra:** O modelo aprendeu regras rígidas de corte (ex: 90 dias). Comportamentos sazonais (ex: clientes que só vêm no Natal) podem ser classificados erroneamente como churn.
+- `fastapi`
+- `uvicorn[standard]`
+- `pydantic`
+- `pydantic-settings`
+- `scikit-learn`
+- `numpy`
+- `joblib`
+- `huggingface_hub`
+
+Dependências de desenvolvimento:
+
+- `pytest`
+- `httpx`
+- `black`
+- `autoflake`
+
+## Melhorias futuras
+
+- persistência de dados em banco
+- autenticação e autorização
+- CI/CD para deploy automático
+- monitoramento e métricas
+- versionamento completo do modelo e rollback
+- suporte a múltiplos ambientes (dev/staging/prod)
+
+## Observações finais
+
+Este repositório demonstra uma aplicação end-to-end que mistura APIs de domínio e inferência de machine learning. A estrutura está pronta para evoluir em direção a um serviço de produção mais completo e escalável.

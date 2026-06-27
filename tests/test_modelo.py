@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 from fastapi.testclient import TestClient
+import model_utils
 from model_utils import load_model
 from main import app
 
@@ -34,6 +35,19 @@ def client():
 
 
 # ── Testes do modelo ───────────────────────────────────────────────────────────
+
+
+def test_load_model_exige_hf_token_quando_nao_presente(monkeypatch):
+    monkeypatch.delenv("HF_TOKEN", raising=False)
+
+    def fake_hf_hub_download(**kwargs):
+        raise AssertionError("hf_hub_download não deveria ser chamado sem HF_TOKEN")
+
+    monkeypatch.setattr(model_utils, "hf_hub_download", fake_hf_hub_download)
+    monkeypatch.setattr(model_utils, "login", lambda *args, **kwargs: None)
+
+    with pytest.raises(RuntimeError, match="HF_TOKEN"):
+        load_model(REPO_ID, filename=FILENAME)
 
 
 @pytest.mark.integracao
